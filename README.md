@@ -16,8 +16,8 @@
 ## 安装
 
 ```bash
-git clone https://github.com/Garoth/echo-mcp.git
-cd echo-mcp
+git clone https://github.com/Luffy-developer/sample-sse-mcp.git
+cd sample-sse-mcp
 npm install
 ```
 
