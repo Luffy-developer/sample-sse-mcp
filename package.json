@@ -1,0 +1,44 @@
+{
+  "name": "echo-server",
+  "version": "0.1.0",
+  "description": "Repeats back whatever it is prompted for testing",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "echo-server": "./build/index.js"
+  },
+  "files": [
+    "build"
+  ],
+  "scripts": {
+    "build": "tsc && node -e \"require('fs').chmodSync('build/index.js', '755')\"",
+    "prepare": "npm run build",
+    "watch": "tsc --watch",
+    "inspector": "npx @modelcontextprotocol/inspector build/index.js",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
+    "test:name": "node --experimental-vm-modules node_modules/jest/bin/jest.js -t",
+    "test:sse": "npm run build && node --experimental-modules --no-warnings test/test-sse-server.js",
+    "start:sse": "TRANSPORT_TYPE=sse node build/index.js",
+    "start:stdio": "TRANSPORT_TYPE=stdio node build/index.js",
+    "start:sse-server": "node build/start-sse.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/jsonwebtoken": "^9.0.10",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.0",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "zod-to-json-schema": "^3.24.6"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/node": "^20.11.24",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "typescript": "^5.3.3"
+  }
+}

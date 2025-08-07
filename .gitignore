@@ -1,0 +1,9 @@
+node_modules/
+build/
+*.log
+.env*
+.kuai*
+.idea*
+.vscode*
+.DS_Store
+.codebuddy*

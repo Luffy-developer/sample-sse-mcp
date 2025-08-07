@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCP SSE 客户端测试</title>
+    <style>
+        :root {
+            --primary-color: #4CAF50;
+            --primary-hover: #45a049;
+            --secondary-color: #2196F3;
+            --secondary-hover: #0b7dda;
+            --danger-color: #f44336;
+            --danger-hover: #d32f2f;
+            --bg-color: #f5f5f5;
+            --panel-bg: #f0f8ff;
+            --log-bg: #f9f9f9;
+            --border-color: #ddd;
+            --text-color: #333;
+            --success-color: #4CAF50;
+            --error-color: #cc0000;
+            --info-color: #0066cc;
+            --muted-color: #999;
+        }
+
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        h1, h2, h3 {
+            color: var(--text-color);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        h1:after {
+            content: '';
+            display: block;
+            width: 100px;
+            height: 3px;
+            background: var(--primary-color);
+            margin: 10px auto;
+        }
+
+        .container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .control-panel {
+            margin-bottom: 25px;
+            padding: 20px;
+            background-color: var(--panel-bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+
+        .control-panel h3 {
+            margin-top: 0;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .log-container {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            padding: 15px;
+            background-color: var(--log-bg);
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+
+        .log-entry {
+            margin: 8px 0;
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            transition: background-color 0.2s;
+        }
+
+        .log-entry:hover {
+            background-color: rgba(0, 0, 0, 0.02);
+        }
+
+        .log-entry.event {
+            color: var(--info-color);
+        }
+
+        .log-entry.message {
+            color: var(--success-color);
+        }
+
+        .log-entry.error {
+            color: var(--error-color);
+            font-weight: bold;
+        }
+
+        .log-entry.heartbeat {
+            color: var(--muted-color);
+            font-style: italic;
+        }
+
+        .log-entry .timestamp {
+            color: var(--muted-color);
+            margin-right: 10px;
+            font-size: 0.9em;
+        }
+
+        .log-entry .content {
+            word-break: break-all;
+        }
+
+        .log-entry.json .content {
+            white-space: pre-wrap;
+        }
+
+        button {
+            padding: 10px 18px;
+            margin-right: 10px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.2s, transform 0.1s;
+            outline: none;
+        }
+
+        button:hover {
+            background-color: var(--primary-hover);
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        button.disconnect {
+            background-color: var(--danger-color);
+        }
+
+        button.disconnect:hover {
+            background-color: var(--danger-hover);
+        }
+
+        button.send {
+            background-color: var(--secondary-color);
+        }
+
+        button.send:hover {
+            background-color: var(--secondary-hover);
+        }
+
+        button.clear {
+            background-color: #ff9800;
+        }
+
+        button.clear:hover {
+            background-color: #e68a00;
+        }
+
+        input[type="text"], textarea {
+            padding: 10px;
+            width: 100%;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-family: inherit;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus, textarea:focus {
+            border-color: var(--secondary-color);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .status {
+            margin-top: 15px;
+            font-weight: bold;
+            padding: 8px 15px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+
+        .status.connected {
+            background-color: rgba(76, 175, 80, 0.1);
+            color: var(--success-color);
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+
+        .status.disconnected {
+            background-color: rgba(244, 67, 54, 0.1);
+            color: var(--error-color);
+            border: 1px solid rgba(244, 67, 54, 0.3);
+        }
+
+        .status.connecting {
+            background-color: rgba(255, 152, 0, 0.1);
+            color: #ff9800;
+            border: 1px solid rgba(255, 152, 0, 0.3);
+        }
+
+        .button-group {
+            margin-top: 15px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .message-format {
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: var(--muted-color);
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            border-bottom: none;
+            margin-right: 5px;
+            border-radius: 5px 5px 0 0;
+            background-color: #f1f1f1;
+        }
+
+        .tab.active {
+            background-color: white;
+            border-color: var(--border-color);
+            border-bottom: 1px solid white;
+            margin-bottom: -1px;
+            font-weight: bold;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .connection-info {
+            margin-top: 15px;
+            font-size: 0.9em;
+            color: var(--muted-color);
+        }
+
+        .connection-info span {
+            margin-right: 15px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 7px;
+            font-size: 12px;
+            font-weight: bold;
+            line-height: 1;
+            color: #fff;
+            text-align: center;
+            white-space: nowrap;
+            vertical-align: middle;
+            background-color: var(--muted-color);
+            border-radius: 10px;
+            margin-left: 5px;
+        }
+
+        .badge.success {
+            background-color: var(--success-color);
+        }
+
+        .badge.error {
+            background-color: var(--error-color);
+        }
+
+        .badge.info {
+            background-color: var(--info-color);
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .container {
+                padding: 15px;
+            }
+            
+            .control-panel {
+                padding: 15px;
+            }
+            
+            button {
+                padding: 8px 12px;
+                margin-bottom: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>MCP SSE 客户端测试</h1>
+    <div class="container">
+        <div class="tabs">
+            <div class="tab active" data-tab="connection">连接设置</div>
+            <div class="tab" data-tab="message">消息发送</div>
+            <div class="tab" data-tab="logs">事件日志</div>
+        </div>
+
+        <div class="tab-content active" id="connection-tab">
+            <div class="control-panel">
+                <h3>连接控制</h3>
+                <div class="form-group">
+                    <label for="sseUrl">SSE 服务器 URL:</label>
+                    <input type="text" id="sseUrl" value="http://localhost:4000/mcp-sse">
+                </div>
+                <div class="form-group">
+                    <label for="messageUrl">消息发送 URL:</label>
+                    <input type="text" id="messageUrl" value="http://localhost:4000/mcp-message">
+                    <div class="message-format">默认从SSE URL自动推导，可手动修改</div>
+                </div>
+                <div class="button-group">
+                    <button id="connectBtn">连接</button>
+                    <button id="disconnectBtn" class="disconnect" disabled>断开连接</button>
+                    <button id="reconnectBtn" disabled>重新连接</button>
+                </div>
+                <div class="status disconnected" id="connectionStatus">未连接</div>
+                <div class="connection-info" id="connectionInfo" style="display: none;">
+                    <span id="clientId">客户端ID: -</span>
+                    <span id="messageCount">消息数: <span class="badge info">0</span></span>
+                    <span id="heartbeatCount">心跳数: <span class="badge">0</span></span>
+                    <span id="errorCount">错误数: <span class="badge error">0</span></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="message-tab">
+            <div class="control-panel">
+                <h3>消息发送</h3>
+                <div class="form-group">
+                    <label for="messageInput">消息内容 (JSON格式):</label>
+                    <textarea id="messageInput" placeholder='{"type": "test", "content": "测试消息", "timestamp": "2025-07-25T00:00:00.000Z"}'></textarea>
+                </div>
+                <div class="button-group">
+                    <button id="sendBtn" class="send" disabled>发送消息</button>
+                    <button id="formatBtn">格式化JSON</button>
+                    <button id="sampleBtn">加载示例</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="logs-tab">
+            <div class="control-panel">
+                <h3>事件日志</h3>
+                <div class="button-group">
+                    <button id="clearLogBtn" class="clear">清空日志</button>
+                    <button id="exportLogBtn">导出日志</button>
+                    <label>
+                        <input type="checkbox" id="autoScrollCheck" checked> 自动滚动
+                    </label>
+                </div>
+                <div class="log-container" id="logContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM 元素
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const reconnectBtn = document.getElementById('reconnectBtn');
+        const sendBtn = document.getElementById('sendBtn');
+        const formatBtn = document.getElementById('formatBtn');
+        const sampleBtn = document.getElementById('sampleBtn');
+        const clearLogBtn = document.getElementById('clearLogBtn');
+        const exportLogBtn = document.getElementById('exportLogBtn');
+        const autoScrollCheck = document.getElementById('autoScrollCheck');
+        const sseUrlInput = document.getElementById('sseUrl');
+        const messageUrlInput = document.getElementById('messageUrl');
+        const messageInput = document.getElementById('messageInput');
+        const logContainer = document.getElementById('logContainer');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const connectionInfo = document.getElementById('connectionInfo');
+        const clientIdSpan = document.getElementById('clientId');
+        const messageCountBadge = document.getElementById('messageCount').querySelector('.badge');
+        const heartbeatCountBadge = document.getElementById('heartbeatCount').querySelector('.badge');
+        const errorCountBadge = document.getElementById('errorCount').querySelector('.badge');
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        // 计数器
+        let messageCount = 0;
+        let heartbeatCount = 0;
+        let errorCount = 0;
+        let clientId = null;
+
+        // SSE 连接
+        let eventSource = null;
+        let reconnectAttempts = 0;
+        const MAX_RECONNECT_ATTEMPTS = 5;
+        const RECONNECT_DELAY = 2000;
+
+        // 标签页切换
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tabContents.forEach(c => c.classList.remove('active'));
+                
+                tab.classList.add('active');
+                const tabId = tab.getAttribute('data-tab');
+                document.getElementById(`${tabId}-tab`).classList.add('active');
+            });
+        });
+
+        // 自动更新消息URL
+        sseUrlInput.addEventListener('input', () => {
+            const sseUrl = sseUrlInput.value.trim();
+            if (sseUrl) {
+                const baseUrl = sseUrl.split('/').slice(0, -1).join('/');
+                messageUrlInput.value = `${baseUrl}/mcp-message`;
+            }
+        });
+
+        // 添加日志条目
+        function addLogEntry(message, type = 'info', jsonData = null) {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            
+            const timestamp = document.createElement('span');
+            timestamp.className = 'timestamp';
+            timestamp.textContent = new Date().toLocaleTimeString();
+            
+            const content = document.createElement('span');
+            content.className = 'content';
+            
+            if (jsonData && type !== 'heartbeat') {
+                entry.classList.add('json');
+                try {
+                    const formattedJson = JSON.stringify(jsonData, null, 2);
+                    content.textContent = `${message}\n${formattedJson}`;
+                } catch (e) {
+                    content.textContent = message;
+                }
+            } else {
+                content.textContent = message;
+            }
+            
+            entry.appendChild(timestamp);
+            entry.appendChild(content);
+            logContainer.appendChild(entry);
+            
+            if (autoScrollCheck.checked) {
+                logContainer.scrollTop = logContainer.scrollHeight;
+            }
+            
+            // 更新计数器
+            if (type === 'message') {
+                messageCount++;
+                messageCountBadge.textContent = messageCount;
+            } else if (type === 'heartbeat') {
+                heartbeatCount++;
+                heartbeatCountBadge.textContent = heartbeatCount;
+            } else if (type === 'error') {
+                errorCount++;
+                errorCountBadge.textContent = errorCount;
+            }
+        }
+
+        // 连接到 SSE 服务器
+        function connectToSSE() {
+            const url = sseUrlInput.value.trim();
+            if (!url) {
+                addLogEntry('请输入有效的 SSE 服务器 URL', 'error');
+                return;
+            }
+
+            try {
+                // 关闭现有连接
+                if (eventSource) {
+                    eventSource.close();
+                }
+
+                // 更新状态
+                connectionStatus.textContent = '正在连接...';
+                connectionStatus.className = 'status connecting';
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+                reconnectBtn.disabled = true;
+
+                addLogEntry(`正在连接到 ${url}...`);
+                eventSource = new EventSource(url);
+
+                // 连接打开
+                eventSource.onopen = function() {
+                    addLogEntry('SSE 连接已建立', 'event');
+                    connectionStatus.textContent = '已连接';
+                    connectionStatus.className = 'status connected';
+                    connectBtn.disabled = true;
+                    disconnectBtn.disabled = false;
+                    reconnectBtn.disabled = false;
+                    sendBtn.disabled = false;
+                    connectionInfo.style.display = 'block';
+                    reconnectAttempts = 0;
+                };
+
+                // 连接错误
+                eventSource.onerror = function(error) {
+                    addLogEntry('SSE 连接错误', 'error');
+                    connectionStatus.textContent = '连接错误';
+                    connectionStatus.className = 'status disconnected';
+                    connectBtn.disabled = false;
+                    disconnectBtn.disabled = true;
+                    reconnectBtn.disabled = false;
+                    sendBtn.disabled = true;
+                    
+                    // 自动重连尝试
+                    if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+                        reconnectAttempts++;
+                        const delay = RECONNECT_DELAY * reconnectAttempts;
+                        addLogEntry(`将在 ${delay/1000} 秒后尝试重新连接 (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`, 'info');
+                        setTimeout(connectToSSE, delay);
+                    } else {
+                        addLogEntry(`已达到最大重连次数 (${MAX_RECONNECT_ATTEMPTS})，请手动重新连接`, 'error');
+                    }
+                };
+
+                // 消息事件
+                eventSource.addEventListener('message', function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        addLogEntry(`收到消息:`, 'message', data);
+                    } catch (e) {
+                        addLogEntry(`收到消息: ${event.data}`, 'message');
+                    }
+                });
+
+                // 连接事件
+                eventSource.addEventListener('connected', function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        clientId = data.clientId;
+                        clientIdSpan.textContent = `客户端ID: ${clientId}`;
+                        addLogEntry(`连接成功:`, 'event', data);
+                    } catch (e) {
+                        addLogEntry(`连接成功: ${event.data}`, 'event');
+                    }
+                });
+
+                // 心跳事件
+                eventSource.addEventListener('heartbeat', function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        addLogEntry(`心跳: ${data.timestamp}`, 'heartbeat');
+                    } catch (e) {
+                        addLogEntry(`心跳: ${event.data}`, 'heartbeat');
+                    }
+                });
+
+                // 错误事件
+                eventSource.addEventListener('error', function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        addLogEntry(`服务器错误:`, 'error', data);
+                    } catch (e) {
+                        addLogEntry(`服务器错误: ${event.data || '未知错误'}`, 'error');
+                    }
+                });
+
+            } catch (error) {
+                addLogEntry(`创建 SSE 连接失败: ${error.message}`, 'error');
+                connectionStatus.textContent = '连接失败';
+                connectionStatus.className = 'status disconnected';
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+                reconnectBtn.disabled = false;
+                sendBtn.disabled = true;
+            }
+        }
+
+        // 断开 SSE 连接
+        function disconnectFromSSE() {
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+                addLogEntry('SSE 连接已断开', 'event');
+                connectionStatus.textContent = '未连接';
+                connectionStatus.className = 'status disconnected';
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+                reconnectBtn.disabled = false;
+                sendBtn.disabled = true;
+            }
+        }
+
+        // 发送消息到服务器
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message) {
+                addLogEntry('请输入要发送的消息', 'error');
+                return;
+            }
+
+            // 验证JSON格式
+            try {
+                JSON.parse(message);
+            } catch (e) {
+                addLogEntry(`消息格式错误: ${e.message}`, 'error');
+                return;
+            }
+
+            const url = messageUrlInput.value.trim();
+            if (!url) {
+                addLogEntry('请输入有效的消息发送 URL', 'error');
+                return;
+            }
+            
+            addLogEntry(`正在发送消息到 ${url}...`);
+            
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: message
+            })
+            .then(response => response.json())
+            .then(data => {
+                addLogEntry(`消息发送成功:`, 'message', JSON.parse(message));
+                addLogEntry(`服务器响应:`, 'event', data);
+            })
+            .catch(error => {
+                addLogEntry(`消息发送失败: ${error.message}`, 'error');
+            });
+        }
+
+        // 格式化JSON
+        function formatJSON() {
+            try {
+                const json = JSON.parse(messageInput.value.trim() || '{}');
+                messageInput.value = JSON.stringify(json, null, 2);
+            } catch (e) {
+                addLogEntry(`JSON格式错误: ${e.message}`, 'error');
+            }
+        }
+
+        // 加载示例消息
+        function loadSampleMessage() {
+            const sample = {
+                type: "test",
+                content: "这是一条测试消息",
+                timestamp: new Date().toISOString(),
+                data: {
+                    id: Math.floor(Math.random() * 1000),
+                    value: Math.random().toFixed(2)
+                }
+            };
+            messageInput.value = JSON.stringify(sample, null, 2);
+        }
+
+        // 清空日志
+        function clearLog() {
+            logContainer.innerHTML = '';
+            addLogEntry('日志已清空');
+        }
+
+        // 导出日志
+        function exportLog() {
+            const logs = Array.from(logContainer.children).map(entry => {
+                const timestamp = entry.querySelector('.timestamp').textContent;
+                const content = entry.querySelector('.content').textContent;
+                const type = entry.className.replace('log-entry', '').replace('json', '').trim();
+                return `[${timestamp}][${type}] ${content}`;
+            }).join('\n');
+            
+            const blob = new Blob([logs], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `mcp-sse-logs-${new Date().toISOString().replace(/:/g, '-')}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            addLogEntry('日志已导出');
+        }
+
+        // 事件监听器
+        connectBtn.addEventListener('click', connectToSSE);
+        disconnectBtn.addEventListener('click', disconnectFromSSE);
+        reconnectBtn.addEventListener('click', connectToSSE);
+        sendBtn.addEventListener('click', sendMessage);
+        formatBtn.addEventListener('click', formatJSON);
+        sampleBtn.addEventListener('click', loadSampleMessage);
+        clearLogBtn.addEventListener('click', clearLog);
+        exportLogBtn.addEventListener('click', exportLog);
+
+        // 初始化
+        addLogEntry('MCP SSE 客户端测试页面已加载');
+        
+        // 支持按Enter键发送消息
+        messageInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.ctrlKey && !sendBtn.disabled) {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>
